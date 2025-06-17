@@ -283,7 +283,7 @@ function Header({ user, onLogout }: { user: User; onLogout: () => void }) {
          <div className="flex justify-between items-center mb-4">
             <div></div>
             <h1 className="text-4xl font-bold text-gray-800">
-               English to Igbo Translator
+               OHA
             </h1>
             <div className="flex items-center gap-3">
                <div
