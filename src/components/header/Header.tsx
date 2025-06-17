@@ -2,14 +2,23 @@ import React from 'react';
 import { GraduationCap, User, LogOut } from 'lucide-react';
 import { USER_ROLES } from '@/types';
 
-export default function Header({ user, onLogout }) {
+interface User {
+   role: keyof typeof USER_ROLES;
+   username: string;
+}
+
+export default function Header({
+   user,
+   onLogout,
+}: {
+   user: User;
+   onLogout: () => void;
+}) {
    return (
       <div className="text-center mb-8">
          <div className="flex justify-between items-center mb-4">
             <div></div>
-            <h1 className="text-4xl font-bold text-gray-800">
-               OHA
-            </h1>
+            <h1 className="text-4xl font-bold text-gray-800">OHA</h1>
             <div className="flex items-center gap-3">
                <div
                   className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
