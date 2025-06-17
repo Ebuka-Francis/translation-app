@@ -701,7 +701,7 @@ function TranslatorApp({
    // Handle translation
    const handleTranslate = async (): Promise<void> => {
       try {
-         const translateData = await fetch(
+         const response = await fetch(
             'https://igbo-translator-backend.onrender.com/api/translate',
             {
                method: 'POST',
@@ -713,6 +713,8 @@ function TranslatorApp({
                }),
             }
          );
+
+         const translateData = await response.json();
          console.log('Translation API response:', translateData);
       } catch (error) {
          console.error('Translation API error:', error);
