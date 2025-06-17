@@ -282,9 +282,7 @@ function Header({ user, onLogout }: { user: User; onLogout: () => void }) {
       <div className="text-center mb-8">
          <div className="flex justify-between items-center mb-4">
             <div></div>
-            <h1 className="text-4xl font-bold text-gray-800">
-               OHA
-            </h1>
+            <h1 className="text-4xl font-bold text-gray-800">OHA</h1>
             <div className="flex items-center gap-3">
                <div
                   className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
@@ -641,7 +639,7 @@ function TranslatorApp({
 }) {
    const [englishText, setEnglishText] = useState<string>('');
    const [igboText, setIgboText] = useState<string>('');
-   const [isTranslating, setIsTranslating] = useState<boolean>(false);
+   const [isTranslating] = useState<boolean>(false);
    const [searchSuggestions, setSearchSuggestions] = useState<string[]>([]);
    const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
    const [translationHistory, setTranslationHistory] = useState<HistoryItem[]>(
@@ -701,35 +699,52 @@ function TranslatorApp({
    };
 
    // Handle translation
-   const handleTranslate = (): void => {
-      if (!englishText.trim()) return;
-
-      setIsTranslating(true);
-
-      setTimeout(() => {
-         const translation = translateText(englishText);
-         setIgboText(translation);
-
-         // Add to history
-         const newHistoryItem: HistoryItem = {
-            id: Date.now(),
-            english: englishText,
-            igbo: translation,
-            timestamp: new Date().toLocaleString(),
-         };
-
-         const updatedHistory = [
-            newHistoryItem,
-            ...translationHistory.slice(0, 9),
-         ];
-         setTranslationHistory(updatedHistory);
-         localStorage.setItem(
-            `igbo-history-${user.id}`,
-            JSON.stringify(updatedHistory)
+   const handleTranslate = async (): Promise<void> => {
+      try {
+         const translateData = await fetch(
+            'https://igbo-translator-backend.onrender.com/api/translate',
+            {
+               method: 'POST',
+               headers: {
+                  'Content-Type': 'application/json',
+               },
+               body: JSON.stringify({
+                  text: englishText,
+               }),
+            }
          );
+         console.log('Translation API response:', translateData);
+      } catch (error) {
+         console.error('Translation API error:', error);
+      }
+      // if (!englishText.trim()) return;
 
-         setIsTranslating(false);
-      }, 500);
+      // setIsTranslating(true);
+
+      // setTimeout(() => {
+      //    const translation = translateText(englishText);
+      //    setIgboText(translation);
+
+      //    // Add to history
+      //    const newHistoryItem: HistoryItem = {
+      //       id: Date.now(),
+      //       english: englishText,
+      //       igbo: translation,
+      //       timestamp: new Date().toLocaleString(),
+      //    };
+
+      //    const updatedHistory = [
+      //       newHistoryItem,
+      //       ...translationHistory.slice(0, 9),
+      //    ];
+      //    setTranslationHistory(updatedHistory);
+      //    localStorage.setItem(
+      //       `igbo-history-${user.id}`,
+      //       JSON.stringify(updatedHistory)
+      //    );
+
+      //    setIsTranslating(false);
+      // }, 500);
    };
 
    // Handle input change with suggestions
