@@ -3,7 +3,7 @@ import { Play, Search, Filter, Video, Clock, User, Eye } from 'lucide-react';
 
 // Type definitions (same as in your main app)
 interface VideoItem {
-   id: number;
+   id: string;
    title: string;
    description: string;
    url: string;

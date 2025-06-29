@@ -1,9 +1,9 @@
 import React from 'react';
 import { GraduationCap, User, LogOut } from 'lucide-react';
-import { USER_ROLES } from '@/types';
+import { UserRole } from '@/types';
 
 interface User {
-   role: keyof typeof USER_ROLES;
+   role: UserRole;
    username: string;
 }
 
@@ -22,12 +22,12 @@ export default function Header({
             <div className="flex items-center gap-3">
                <div
                   className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
-                     user.role === USER_ROLES.STUDENT
+                     user.role === 'student'
                         ? 'bg-blue-100 text-blue-700'
                         : 'bg-green-100 text-green-700'
                   }`}
                >
-                  {user.role === USER_ROLES.STUDENT ? (
+                  {user.role === 'student' ? (
                      <GraduationCap className="w-4 h-4" />
                   ) : (
                      <User className="w-4 h-4" />
@@ -46,7 +46,7 @@ export default function Header({
          <p className="text-gray-600">
             Translate English words and phrases to Igbo language
          </p>
-         {user.role === USER_ROLES.TEACHER && (
+         {user.role === 'teacher' && (
             <p className="text-green-600 text-sm mt-2">
                Teacher Mode: Access to all features and student progress
             </p>
