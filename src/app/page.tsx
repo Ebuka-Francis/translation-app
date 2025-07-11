@@ -6,15 +6,10 @@ import TranslationInterface from '@/components/igboTranslator/IgboTranslatorApp'
 import VideoUploadSection from '@/components/videoSection/VideoUpload';
 import VideoLibrary from '@/components/library/VideoLibrary';
 import Footer from '@/components/footer/Footer';
+import axios, { AxiosError } from 'axios';
+import { config } from '@/components/api/api';
 
-import {
-   HistoryItem,
-   FavoriteItem,
-   VideoItem,
-   //  englishToIgbo,
-   //  popularPhrases,
-   Users,
-} from '@/types';
+import { HistoryItem, FavoriteItem, VideoItem, Users } from '@/types';
 
 // Import the translation data
 import { englishToIgbo } from '../data/data';
@@ -31,6 +26,25 @@ export default function Page() {
    const [englishText, setEnglishText] = useState<string>('');
    const [igboText, setIgboText] = useState<string>('');
    const [isTranslating, setIsTranslating] = useState<boolean>(false);
+
+   // Check for existing user session on component mount
+   useEffect(() => {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+
+      if (token && userData) {
+         try {
+            const parsedUser = JSON.parse(userData);
+            setUser(parsedUser);
+            // Set authorization header for future requests
+            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+         } catch (error) {
+            console.error('Error parsing user data:', error);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+         }
+      }
+   }, []);
 
    useEffect(() => {
       if (user) {
@@ -61,40 +75,30 @@ export default function Page() {
    // Handle user logout
    const handleLogout = () => {
       setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      delete axios.defaults.headers.common['Authorization'];
    };
 
-   // Translation function
-   // Translation function
+   // Translation function using axios
    const handleTranslate = async () => {
       if (!englishText.trim()) return;
 
       setIsTranslating(true);
 
       try {
-         const response = await fetch(
-            'https://igbo-translator-backend.onrender.com/api/translate',
+         const response = await axios.post(
+            ` ${config.baseUrl}${config.endpoints.translateText} `,
             {
-               method: 'POST',
-               headers: {
-                  'Content-Type': 'application/json',
-               },
-               body: JSON.stringify({
-                  text: englishText,
-               }),
+               text: englishText,
             }
          );
 
-         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-         }
-
-         const translateData = await response.json();
-
          // Extract the translation from the response
-         // Adjust this based on your API response structure
          const translation =
-            translateData.igboText ||
-            translateData.result ||
+            response.data.igboText ||
+            response.data.result ||
+            response.data.translation ||
             'Translation not available';
 
          setIgboText(translation);
@@ -117,6 +121,16 @@ export default function Page() {
          }
       } catch (error) {
          console.error('Translation API error:', error);
+
+         // Handle axios errors
+         if (axios.isAxiosError(error)) {
+            const axiosError = error as AxiosError;
+            if (axiosError.response?.status === 401) {
+               // Token expired, logout user
+               handleLogout();
+               return;
+            }
+         }
 
          // Fallback to local translation data if API fails
          let fallbackTranslation: string;
@@ -150,9 +164,6 @@ export default function Page() {
                JSON.stringify(updatedHistory)
             );
          }
-
-         // Optionally show an error message to the user
-         // You might want to add error state management here
       } finally {
          setIsTranslating(false);
       }
@@ -160,7 +171,6 @@ export default function Page() {
 
    // Add to favorites function
    const handleAddToFavorites = () => {
-      console.log(' i am here,');
       if (!englishText.trim() || !igboText.trim() || !user) return;
 
       const newFavorite: FavoriteItem = {
@@ -168,7 +178,6 @@ export default function Page() {
          english: englishText,
          igbo: igboText,
          timestamp: new Date().toISOString(),
-         //  userId: user.id,
       };
 
       // Check if already in favorites
@@ -187,18 +196,35 @@ export default function Page() {
    };
 
    // Video management functions
-   const handleVideoUpload = (newVideo: VideoItem) => {
-      const updatedVideos = [...videos, newVideo];
-      setVideos(updatedVideos);
-      localStorage.setItem('igbo-videos', JSON.stringify(updatedVideos));
+   const handleVideoUpload = async (newVideo: VideoItem) => {
+      try {
+         // If you have a video upload API endpoint
+         // const response = await axios.post('/api/videos', newVideo);
+         // const savedVideo = response.data;
+
+         // For now, using local storage
+         const updatedVideos = [...videos, newVideo];
+         setVideos(updatedVideos);
+         localStorage.setItem('igbo-videos', JSON.stringify(updatedVideos));
+      } catch (error) {
+         console.error('Video upload error:', error);
+      }
    };
 
-   const handleVideoDelete = (videoId: string) => {
-      const updatedVideos = videos.filter(
-         (video) => String(video.id) !== videoId
-      );
-      setVideos(updatedVideos);
-      localStorage.setItem('igbo-videos', JSON.stringify(updatedVideos));
+   const handleVideoDelete = async (videoId: string) => {
+      try {
+         // If you have a video delete API endpoint
+         // await axios.delete(`/api/videos/${videoId}`);
+
+         // For now, using local storage
+         const updatedVideos = videos.filter(
+            (video) => String(video.id) !== videoId
+         );
+         setVideos(updatedVideos);
+         localStorage.setItem('igbo-videos', JSON.stringify(updatedVideos));
+      } catch (error) {
+         console.error('Video delete error:', error);
+      }
    };
 
    // Render based on login state
