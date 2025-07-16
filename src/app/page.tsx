@@ -34,10 +34,11 @@ export default function Page() {
 
       if (token && userData) {
          try {
-            const parsedUser = JSON.parse(userData);
-            setUser(parsedUser);
             // Set authorization header for future requests
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+            // Validate token with backend instead of just trusting localStorage
+            validateToken();
          } catch (error) {
             console.error('Error parsing user data:', error);
             localStorage.removeItem('token');
@@ -72,13 +73,131 @@ export default function Page() {
       setUser(loggedInUser);
    };
 
-   // Handle user logout
-   const handleLogout = () => {
-      setUser(null);
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      delete axios.defaults.headers.common['Authorization'];
+   // Handle user logout with backend API call
+   const handleLogout = async () => {
+      try {
+         const token = localStorage.getItem('token');
+
+         if (token) {
+            // Call backend logout API to blacklist the token
+            await axios.post(
+               `${config.baseUrl}${config.endpoints.logout || '/auth/logout'}`,
+               {},
+               {
+                  headers: {
+                     Authorization: `Bearer ${token}`,
+                     'Content-Type': 'application/json',
+                  },
+               }
+            );
+         }
+      } catch (error) {
+         console.error('Logout API error:', error);
+
+         // Handle different types of errors
+         if (axios.isAxiosError(error)) {
+            const axiosError = error as AxiosError;
+            if (axiosError.response?.status === 401) {
+               // Token already invalid, continue with logout
+               console.log('Token was already invalid');
+            } else if (axiosError.response?.status === 500) {
+               console.error('Server error during logout');
+            }
+         }
+
+         // Continue with client-side logout even if API call fails
+      } finally {
+         // Always perform client-side cleanup
+         setUser(null);
+         localStorage.removeItem('token');
+         localStorage.removeItem('user');
+         delete axios.defaults.headers.common['Authorization'];
+
+         // Clear user-specific data
+         setFavorites([]);
+         setTranslationHistory([]);
+         setVideos([]);
+
+         // Reset translation interface
+         setEnglishText('');
+         setIgboText('');
+         setIsTranslating(false);
+      }
    };
+
+   // Enhanced token validation function
+   const validateToken = async () => {
+      try {
+         const token = localStorage.getItem('token');
+         if (!token) {
+            handleLogout();
+            return false;
+         }
+
+         // Try to get user profile to validate token
+         const response = await axios.get(
+            `${config.baseUrl}${config.endpoints.getProfile || '/auth/me'}`,
+            {
+               headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+               },
+            }
+         );
+
+         if (response.data && response.data.id) {
+            // Token is valid, update user data if needed
+            setUser(response.data);
+            return true;
+         } else {
+            // Invalid response, logout
+            handleLogout();
+            return false;
+         }
+      } catch (error) {
+         console.error('Token validation error:', error);
+
+         if (axios.isAxiosError(error)) {
+            const axiosError = error as AxiosError;
+            if (axiosError.response?.status === 401) {
+               // Token expired or invalid
+               handleLogout();
+               return false;
+            }
+         }
+
+         // For other errors, don't logout automatically
+         return false;
+      }
+   };
+
+   // Setup axios interceptor for global error handling
+   useEffect(() => {
+      const interceptor = axios.interceptors.response.use(
+         (response) => response,
+         (error) => {
+            if (error.response?.status === 401) {
+               // Token expired or invalid, logout user
+               handleLogout();
+            }
+            return Promise.reject(error);
+         }
+      );
+
+      // Cleanup interceptor on unmount
+      return () => axios.interceptors.response.eject(interceptor);
+   }, []);
+
+   // Periodic token validation (every 5 minutes)
+   useEffect(() => {
+      if (user) {
+         const interval = setInterval(() => {
+            validateToken();
+         }, 5 * 60 * 1000); // 5 minutes
+
+         return () => clearInterval(interval);
+      }
+   }, [user]);
 
    // Translation function using axios
    const handleTranslate = async () => {
@@ -208,6 +327,15 @@ export default function Page() {
          localStorage.setItem('igbo-videos', JSON.stringify(updatedVideos));
       } catch (error) {
          console.error('Video upload error:', error);
+
+         // Handle token expiration during video upload
+         if (axios.isAxiosError(error)) {
+            const axiosError = error as AxiosError;
+            if (axiosError.response?.status === 401) {
+               handleLogout();
+               return;
+            }
+         }
       }
    };
 
@@ -224,6 +352,15 @@ export default function Page() {
          localStorage.setItem('igbo-videos', JSON.stringify(updatedVideos));
       } catch (error) {
          console.error('Video delete error:', error);
+
+         // Handle token expiration during video deletion
+         if (axios.isAxiosError(error)) {
+            const axiosError = error as AxiosError;
+            if (axiosError.response?.status === 401) {
+               handleLogout();
+               return;
+            }
+         }
       }
    };
 

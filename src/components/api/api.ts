@@ -5,6 +5,7 @@ export const config = {
       translateText: '/api/translate',
       login: '/api/login',
       register: '/api/register',
-      getUser: '/api/getUser', // Fixed from 'getMet'
+      getProfile: '/auth/me',
+      logout: '/auth/logout', // Fixed from 'getMet'
    },
 };

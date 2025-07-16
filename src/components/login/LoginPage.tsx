@@ -1,14 +1,21 @@
 import React, { useState } from 'react';
-import { GraduationCap, User, Eye, EyeOff } from 'lucide-react';
+import {
+   GraduationCap,
+   User,
+   Eye,
+   EyeOff,
+   LogIn,
+   UserPlus,
+} from 'lucide-react';
 import { UserRole, Users } from '@/types';
 import axios from 'axios';
 import { config } from '../api/api';
-
 interface LoginPageProps {
    onLogin: (user: Users) => void;
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
+   const [isLoginMode, setIsLoginMode] = useState(true);
    const [selectedRole, setSelectedRole] = useState<UserRole>('student');
    const [username, setUsername] = useState('');
    const [userEmail, setEmail] = useState('');
@@ -16,6 +23,64 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
    const [showPassword, setShowPassword] = useState(false);
    const [error, setError] = useState('');
    const [isLoading, setIsLoading] = useState(false);
+
+   const handleLogin = async () => {
+      setError('');
+
+      // Validation
+      if (!userEmail || !password) {
+         setError('Please fill in all fields');
+         return;
+      }
+
+      try {
+         const payload = {
+            email: userEmail,
+            password: password,
+         };
+
+         setIsLoading(true);
+         console.log('login payload', payload);
+
+         const response = await axios.post(
+            `${config.baseUrl}${config.endpoints.login}`,
+            payload
+         );
+
+         // Handle successful login
+         if (response.data) {
+            // The API should return user info including role
+            onLogin({
+               id: response.data.id || response.data.user?.id,
+               username:
+                  response.data.username ||
+                  response.data.user?.name ||
+                  response.data.name,
+               role: response.data.role || response.data.user?.role,
+            });
+         }
+      } catch (error: unknown) {
+         console.log('error logging in', error);
+         if (
+            typeof error === 'object' &&
+            error !== null &&
+            'response' in error &&
+            typeof (error as { response?: { data?: { message?: string } } })
+               .response === 'object' &&
+            (error as { response?: { data?: { message?: string } } }).response
+               ?.data?.message
+         ) {
+            setError(
+               (error as { response: { data: { message: string } } }).response
+                  .data.message
+            );
+         } else {
+            setError('Login failed. Please try again.');
+         }
+      } finally {
+         setIsLoading(false);
+      }
+   };
 
    const handleRegister = async () => {
       setError('');
@@ -35,7 +100,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
          };
 
          setIsLoading(true);
-         console.log('payload', payload);
+         console.log('register payload', payload);
 
          const response = await axios.post(
             `${config.baseUrl}${config.endpoints.register}`,
@@ -46,7 +111,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
          if (response.data) {
             // Call the onLogin prop to update parent component
             onLogin({
-               id: response.data.id || username, // Use response ID or fallback
+               id: response.data.id || username,
                username: username,
                role: selectedRole,
             });
@@ -90,8 +155,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
       setSelectedRole(role);
       setUsername(demoUser.username);
-      setEmail(demoUser.email); // Fix: Set email too
+      setEmail(demoUser.email);
       setPassword(demoUser.password);
+   };
+
+   const toggleMode = () => {
+      setIsLoginMode(!isLoginMode);
+      setError('');
+      // Clear form when switching modes
+      setUsername('');
+      setEmail('');
+      setPassword('');
    };
 
    return (
@@ -99,50 +173,85 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
             <div className="text-center mb-8">
                <h1 className="text-3xl font-bold text-gray-800 mb-2">OHA</h1>
-               <p className="text-gray-600">Register to continue</p>
+               <p className="text-gray-600">
+                  {isLoginMode ? 'Login to continue' : 'Register to continue'}
+               </p>
             </div>
 
-            {/* Role Selection */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Mode Toggle */}
+            <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
                <button
-                  onClick={() => setSelectedRole('student')}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                     selectedRole === 'student'
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 hover:border-blue-300'
+                  onClick={() => setIsLoginMode(true)}
+                  className={`flex-1 py-2 px-4 rounded-md transition-all flex items-center justify-center gap-2 ${
+                     isLoginMode
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-blue-600'
                   }`}
                >
-                  <GraduationCap className="w-8 h-8 mx-auto mb-2" />
-                  <div className="font-semibold">Student</div>
+                  <LogIn className="w-4 h-4" />
+                  Login
                </button>
-
                <button
-                  onClick={() => setSelectedRole('teacher')}
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                     selectedRole === 'teacher'
-                        ? 'border-green-500 bg-green-50 text-green-700'
-                        : 'border-gray-200 hover:border-green-300'
+                  onClick={() => setIsLoginMode(false)}
+                  className={`flex-1 py-2 px-4 rounded-md transition-all flex items-center justify-center gap-2 ${
+                     !isLoginMode
+                        ? 'bg-white text-blue-600 shadow-sm'
+                        : 'text-gray-600 hover:text-blue-600'
                   }`}
                >
-                  <User className="w-8 h-8 mx-auto mb-2" />
-                  <div className="font-semibold">Teacher</div>
+                  <UserPlus className="w-4 h-4" />
+                  Register
                </button>
             </div>
 
-            {/* Registration Form */}
-            <div className="space-y-4">
-               <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                     Username
-                  </label>
-                  <input
-                     type="text"
-                     value={username}
-                     onChange={(e) => setUsername(e.target.value)}
-                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                     placeholder="Enter your username"
-                  />
+            {/* Role Selection - Only show for registration */}
+            {!isLoginMode && (
+               <div className="grid grid-cols-2 gap-4 mb-6">
+                  <button
+                     onClick={() => setSelectedRole('student')}
+                     className={`p-4 rounded-lg border-2 transition-all ${
+                        selectedRole === 'student'
+                           ? 'border-blue-500 bg-blue-50 text-blue-700'
+                           : 'border-gray-200 hover:border-blue-300'
+                     }`}
+                  >
+                     <GraduationCap className="w-8 h-8 mx-auto mb-2" />
+                     <div className="font-semibold">Student</div>
+                  </button>
+
+                  <button
+                     onClick={() => setSelectedRole('teacher')}
+                     className={`p-4 rounded-lg border-2 transition-all ${
+                        selectedRole === 'teacher'
+                           ? 'border-green-500 bg-green-50 text-green-700'
+                           : 'border-gray-200 hover:border-green-300'
+                     }`}
+                  >
+                     <User className="w-8 h-8 mx-auto mb-2" />
+                     <div className="font-semibold">Teacher</div>
+                  </button>
                </div>
+            )}
+
+            {/* Form */}
+            <div className="space-y-4">
+               {/* Username - Only show for registration */}
+               {!isLoginMode && (
+                  <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Username
+                     </label>
+                     <input
+                        type="text"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter your username"
+                     />
+                  </div>
+               )}
+
+               {/* Email */}
                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                      Email
@@ -156,6 +265,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   />
                </div>
 
+               {/* Password */}
                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                      Password
@@ -189,16 +299,26 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                )}
 
                <button
-                  onClick={handleRegister}
-                  disabled={!username || !userEmail || !password || isLoading}
+                  onClick={isLoginMode ? handleLogin : handleRegister}
+                  disabled={
+                     (!isLoginMode && (!username || !userEmail || !password)) ||
+                     (isLoginMode && (!userEmail || !password)) ||
+                     isLoading
+                  }
                   className={`w-full py-3 rounded-lg font-semibold transition-colors ${
-                     selectedRole === 'student'
+                     !isLoginMode && selectedRole === 'student'
                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                        : 'bg-green-600 hover:bg-green-700 text-white'
+                        : !isLoginMode && selectedRole === 'teacher'
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
                >
                   {isLoading
-                     ? 'Registering...'
+                     ? isLoginMode
+                        ? 'Logging in...'
+                        : 'Registering...'
+                     : isLoginMode
+                     ? 'Login'
                      : `Register as ${
                           selectedRole.charAt(0).toUpperCase() +
                           selectedRole.slice(1)
@@ -214,17 +334,21 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                      onClick={() => handleQuickLogin('student')}
                      className="w-full text-left text-xs bg-white p-2 rounded border hover:bg-blue-50"
                   >
-                     <strong>Student:</strong> student1 / student1@example.com /
-                     student123
+                     <strong>Student:</strong> student1@example.com / student123
                   </button>
                   <button
                      onClick={() => handleQuickLogin('teacher')}
                      className="w-full text-left text-xs bg-white p-2 rounded border hover:bg-green-50"
                   >
-                     <strong>Teacher:</strong> teacher1 / teacher1@example.com /
-                     teacher123
+                     <strong>Teacher:</strong> teacher1@example.com / teacher123
                   </button>
                </div>
+               <button
+                  onClick={toggleMode}
+                  className="mt-4 w-full py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors"
+               >
+                  {isLoginMode ? 'Register instead' : 'Login instead'}
+               </button>
             </div>
          </div>
       </div>
