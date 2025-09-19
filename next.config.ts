@@ -1,11 +1,10 @@
-// next.config.js
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
    /* config options here */
-   env: {
-      NEXT_PUBLIC_BACKEND_API: 'https://igbo-translator-backend.onrender.com',
-   },
+
+   // Method 1: Environment-based configuration (Recommended)
+   env: {},
 };
 
 export default nextConfig;

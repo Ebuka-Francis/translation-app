@@ -8,8 +8,8 @@ import {
    UserPlus,
 } from 'lucide-react';
 import { UserRole, Users } from '@/types';
-import axios from 'axios';
 import { config } from '../api/api';
+import api from '../services/httpServices';
 interface LoginPageProps {
    onLogin: (user: Users) => void;
 }
@@ -42,7 +42,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
          setIsLoading(true);
          console.log('login payload', payload);
 
-         const response = await axios.post(
+         const response = await api.post(
             `${config.baseUrl}${config.endpoints.login}`,
             payload
          );
@@ -101,8 +101,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
          setIsLoading(true);
          console.log('register payload', payload);
-
-         const response = await axios.post(
+         console.log(`${config.baseUrl}${config.endpoints.register}`);
+         const response = await api.post(
             `${config.baseUrl}${config.endpoints.register}`,
             payload
          );
